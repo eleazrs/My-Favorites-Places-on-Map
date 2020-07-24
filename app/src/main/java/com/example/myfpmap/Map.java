@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.location.Address;
 import android.location.Geocoder;
+import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
@@ -69,15 +70,23 @@ public class Map extends FragmentActivity implements OnMapReadyCallback {
 
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 
-        locationListener = location -> {
-            Log.i("Location", location.toString());
-            if (marker == null ||
-                    location.getLatitude() != marker.getPosition().latitude ||
-                    location.getLongitude() != marker.getPosition().longitude) {
-                if (marker != null) marker.remove();
-                myPosition = new LatLng(location.getLatitude(), location.getLongitude());
-                marker = mMap.addMarker(new MarkerOptions().position(myPosition).title("My position"));
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myPosition, 15));
+        locationListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(@NonNull Location location) {
+                Log.i("Location", location.toString());
+                if (marker == null ||
+                        location.getLatitude() != marker.getPosition().latitude ||
+                        location.getLongitude() != marker.getPosition().longitude) {
+                    if (marker != null) marker.remove();
+                    myPosition = new LatLng(location.getLatitude(), location.getLongitude());
+                    marker = mMap.addMarker(new MarkerOptions().position(myPosition).title("My position"));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myPosition, 15));
+                }
+            }
+
+            @Override
+            public void onProviderDisabled(@NonNull String provider) {
+                Log.w("WARN", "Location is disabled by user");
             }
         };
 

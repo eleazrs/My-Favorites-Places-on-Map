@@ -1,6 +1,8 @@
 package com.example.myfpmap;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -10,6 +12,9 @@ import android.widget.ListView;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.io.Serializable;
@@ -24,18 +29,37 @@ public class MainActivity extends AppCompatActivity {
     private ArrayAdapter<String> placeArrayAdapter;
     private ListView listView;
     private int placeSelectedFromList = -1;
+    private SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        LatLng madridLatLng = new LatLng(40.4723138, -3.6846261);
-        placesLatLng.add(Place.builder()
-                .description("Madrid Lovely City!") //#0x2764D Red heart
-                .latitude(madridLatLng.latitude)
-                .longitude(madridLatLng.longitude)
-                .build());
+        sharedPreferences = this.getSharedPreferences("com.example.myfpmap", Context.MODE_PRIVATE);
+        String placesSerialized = sharedPreferences.getString("placesLatLng", "");
+
+        if (placesSerialized.equals("") || !placesSerialized.contains("description")) {
+            LatLng madridLatLng = new LatLng(40.4723138, -3.6846261);
+            placesLatLng.add(Place.builder()
+                    .description("Madrid Lovely City!") //#0x2764D Red heart
+                    .latitude(madridLatLng.latitude)
+                    .longitude(madridLatLng.longitude)
+                    .build());
+            try {
+                placesSerialized = new ObjectMapper().writeValueAsString(placesLatLng);
+            } catch (JsonProcessingException e) {
+                Log.e("Error processing madridLatLng", e.toString());
+            }
+            sharedPreferences.edit().putString("placesLatLng", placesSerialized).apply();
+        } else {
+            try {
+                placesLatLng = new ObjectMapper().readValue(placesSerialized, new TypeReference<List<Place>>() {
+                });
+            } catch (JsonProcessingException e) {
+                Log.e("ERROR!", "Processing list from sharedPreferences");
+            }
+        }
 
         fillListView();
 
@@ -50,6 +74,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         if (resultCode == 0) {
             placesLatLng = (ArrayList<Place>) Optional.ofNullable(data.getSerializableExtra("placesLatLng")).orElse(new ArrayList<>());
+            String placesSerialized = "";
+            try {
+                placesSerialized = new ObjectMapper().writeValueAsString(placesLatLng);
+            } catch (JsonProcessingException e) {
+                Log.e("Error processing madridLatLng", e.toString());
+            }
+            sharedPreferences.edit().putString("placesLatLng", placesSerialized).apply();
             fillListView();
         }
         super.onActivityResult(requestCode, resultCode, data);
